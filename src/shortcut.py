@@ -15,19 +15,32 @@ BLOG_PREFIXES = (
     "[design]"
 )
 
+BLOG_STATE_IDS = (
+    500000015,   # Default workflow: In Progress
+    500006100,   # Default workflow: Needs Verification
+    500389406,   # CV Platform Team: In Progress
+    500389407,   # CV Platform Team: Needs Verification
+    500406321,   # AI Enablement: In Progress
+    500406323,   # AI Enablement: Needs Verification
+)
+
 
 def search_stories_by_prefix(prefix):
     """
-    Search Shortcut for stories in 'In Progress' or 'Needs Verification'
-    whose title starts with a given prefix. Paginates through all results.
+    Search Shortcut for non-archived stories whose title contains the prefix.
+    Filters by workflow state ID after fetching.
+    Paginates through all results.
     """
     url = f"{BASE_URL}/search/stories"
     stories = []
     next_cursor = None
 
+    # Strip brackets for the search query since they're special characters
+    clean_prefix = prefix.replace("[", "").replace("]", "")
+
     while True:
         params = {
-            "query": f'title:{prefix} (state:"In Progress" OR state:"Needs Verification") !is:archived',
+            "query": f'{clean_prefix} !is:archived',
             "page_size": 25
         }
         if next_cursor:
@@ -36,7 +49,16 @@ def search_stories_by_prefix(prefix):
         response = requests.get(url, params=params, headers=HEADERS)
         response.raise_for_status()
         data = response.json()
-        stories.extend(data.get("data", []))
+
+        for story in data.get("data", []):
+            # Filter by title prefix (case insensitive)
+            title_lower = story["name"].lower()
+            if not title_lower.startswith(prefix.lower()):
+                continue
+            # Filter by workflow state
+            if story.get("workflow_state_id") not in BLOG_STATE_IDS:
+                continue
+            stories.append(story)
 
         next_url = data.get("next")
         if not next_url:
@@ -54,8 +76,8 @@ def search_stories_by_prefix(prefix):
 
 def get_blog_stories():
     """
-    Search Shortcut for all stories in 'In Progress' or 'Needs Verification'
-    matching blog title prefixes. Runs one search per prefix.
+    Search Shortcut for all stories in active states matching blog title prefixes.
+    Runs one search per prefix to avoid scanning the entire workspace.
     Returns two lists:
     - stories with a Google Doc attached
     - stories without a Google Doc yet
