@@ -1,5 +1,5 @@
 import sys
-from src.shortcut import get_blog_stories, get_thumbnail_status, get_workflow_state_name
+from src.shortcut import get_blog_stories, get_thumbnail_status, get_workflow_state_name, debug_workflow_states
 from src.claude_classifier import classify_comments
 from src.slack_reporter import send_readiness_report
 
@@ -42,6 +42,11 @@ def assess_story(story):
 
 def main():
     print("🔍 Starting weekly blog readiness scan...")
+
+    # Temporary: print all workflow state names to verify exact naming
+    print("\n--- Workflow States in your Shortcut workspace ---")
+    debug_workflow_states()
+    print("---------------------------------------------------\n")
 
     # Step 1 — Fetch all blog-prefixed stories from Shortcut
     print("Fetching stories from Shortcut...")
