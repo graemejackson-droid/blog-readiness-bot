@@ -21,7 +21,15 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir \
+            requests==2.31.0 \
+            google-auth==2.23.0 \
+            google-auth-httplib2==0.1.1 \
+            google-api-python-client==2.100.0 \
+            slack-sdk==3.21.3 \
+            httpx==0.27.2 \
+            anthropic==0.49.0 \
+            python-dotenv==1.0.0
 
       - name: Run blog readiness scan
         env:
