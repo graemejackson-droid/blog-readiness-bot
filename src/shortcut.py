@@ -12,8 +12,6 @@ HEADERS = {
 BLOG_PREFIXES = (
     "[blog]",
     "[blog post]",
-    "[content]",
-    "[design]"
 )
 
 BLOG_STATE_IDS = (
@@ -31,6 +29,15 @@ BLOG_STATE_IDS = (
     500331414,
     500334421,
     500334423,
+    500371811,
+    500371812,
+    500372008,
+    500372009,
+    500372699,
+    500372700,
+    500372701,
+    500373311,
+    500373312,
     500389406,
     500389407,
     500390431,
@@ -56,8 +63,13 @@ def search_stories_by_prefix(prefix):
         if next_cursor:
             params["next"] = next_cursor
 
-        response = requests.get(url, params=params, headers=HEADERS)
-        response.raise_for_status()
+        try:
+            response = requests.get(url, params=params, headers=HEADERS)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            print(f"  ⚠️ Search error for '{prefix}': {e} — skipping")
+            break
+
         data = response.json()
 
         for story in data.get("data", []):
