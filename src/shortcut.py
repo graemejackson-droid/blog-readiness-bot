@@ -9,11 +9,6 @@ HEADERS = {
     "Shortcut-Token": SHORTCUT_API_TOKEN
 }
 
-BLOG_PREFIXES = (
-    "[blog]",
-    "[blog post]",
-)
-
 BLOG_STATE_IDS = (
     500000015,
     500006100,
@@ -49,15 +44,19 @@ BLOG_STATE_IDS = (
 )
 
 
-def search_stories_by_prefix(prefix):
+def search_blog_stories():
+    """
+    Search Shortcut for all stories with 'blog' anywhere in the title.
+    Filters by active workflow state IDs in Python after fetching.
+    Paginates through all results.
+    """
     url = f"{BASE_URL}/search/stories"
     stories = []
     next_cursor = None
-    clean_prefix = prefix.replace("[", "").replace("]", "")
 
     while True:
         params = {
-            "query": f'"{clean_prefix}"',
+            "query": '"blog"',
             "page_size": 25
         }
         if next_cursor:
@@ -67,14 +66,13 @@ def search_stories_by_prefix(prefix):
             response = requests.get(url, params=params, headers=HEADERS)
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            print(f"  ⚠️ Search error for '{prefix}': {e} — skipping")
+            print(f"  ⚠️ Search error: {e} — stopping pagination")
             break
 
         data = response.json()
 
         for story in data.get("data", []):
-            title_lower = story["name"].lower()
-            if not title_lower.startswith(prefix.lower()):
+            if "blog" not in story["name"].lower():
                 continue
             if story.get("workflow_state_id") not in BLOG_STATE_IDS:
                 continue
@@ -90,39 +88,43 @@ def search_stories_by_prefix(prefix):
         if not next_cursor:
             break
 
+    print(f"  'blog' → {len(stories)} stories found")
     return stories
 
 
 def get_blog_stories():
+    """
+    Fetches all active blog stories and splits into two lists:
+    - stories with a Google Doc attached
+    - stories without a Google Doc yet
+    """
     seen_ids = set()
     blog_stories = []
     no_doc_stories = []
 
-    for prefix in BLOG_PREFIXES:
-        stories = search_stories_by_prefix(prefix)
-        print(f"  '{prefix}' → {len(stories)} stories found")
+    stories = search_blog_stories()
 
-        for story in stories:
-            if story["id"] in seen_ids:
-                continue
-            seen_ids.add(story["id"])
+    for story in stories:
+        if story["id"] in seen_ids:
+            continue
+        seen_ids.add(story["id"])
 
-            google_doc_url = extract_google_doc_url(story)
-            if google_doc_url:
-                blog_stories.append({
-                    "id": story["id"],
-                    "name": story["name"],
-                    "story_url": story["app_url"],
-                    "google_doc_url": google_doc_url,
-                    "thumbnail_status": None
-                })
-            else:
-                no_doc_stories.append({
-                    "id": story["id"],
-                    "name": story["name"],
-                    "story_url": story["app_url"],
-                    "thumbnail_status": None
-                })
+        google_doc_url = extract_google_doc_url(story)
+        if google_doc_url:
+            blog_stories.append({
+                "id": story["id"],
+                "name": story["name"],
+                "story_url": story["app_url"],
+                "google_doc_url": google_doc_url,
+                "thumbnail_status": None
+            })
+        else:
+            no_doc_stories.append({
+                "id": story["id"],
+                "name": story["name"],
+                "story_url": story["app_url"],
+                "thumbnail_status": None
+            })
 
     return blog_stories, no_doc_stories
 
