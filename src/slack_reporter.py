@@ -5,7 +5,8 @@ from datetime import date
 
 client = WebClient(token=SLACK_BOT_TOKEN)
 
-def send_readiness_report(ready_stories, not_ready_stories):
+
+def send_readiness_report(ready_stories, not_ready_stories, no_doc_stories):
     """
     Formats and sends the weekly blog readiness report to Slack.
     """
@@ -76,7 +77,35 @@ def send_readiness_report(ready_stories, not_ready_stories):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": "*⚠️ Not Yet Ready (0)*\n_All posts are ready this week!_ 🎉"
+                "text": "*⚠️ Not Yet Ready (0)*"
+            }
+        })
+
+    blocks.append({"type": "divider"})
+
+    # No doc yet stories
+    if no_doc_stories:
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*📄 No Google Doc Yet ({len(no_doc_stories)})*"
+            }
+        })
+        for story in no_doc_stories:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"• <{story['story_url']}|{story['name']}>"
+                }
+            })
+    else:
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*📄 No Google Doc Yet (0)*"
             }
         })
 
