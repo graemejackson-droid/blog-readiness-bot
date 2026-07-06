@@ -130,14 +130,30 @@ def get_blog_stories():
 
 
 def extract_google_doc_url(story):
+    """
+    Look for a Google Doc URL in:
+    1. External links
+    2. Description
+    3. Comments (most common location for blog stories)
+    """
+    # Check external links first
     for link in story.get("external_links", []):
         if "docs.google.com" in link:
             return link
 
+    # Check description
     description = story.get("description", "")
     for word in description.split():
         if "docs.google.com" in word:
             return word.strip()
+
+    # Check comments — scan all comment text for Google Doc URLs
+    for comment in story.get("comments", []):
+        text = comment.get("text", "")
+        for word in text.split():
+            clean_word = word.strip("*[]()\"'")
+            if "docs.google.com" in clean_word:
+                return clean_word
 
     return None
 
