@@ -153,3 +153,17 @@ def get_workflow_state_name(workflow_state_id):
                 return state["name"]
 
     return "Unknown"
+
+
+def debug_workflow_states():
+    """
+    Prints all workflow names and their states — used to verify exact state names.
+    """
+    url = f"{BASE_URL}/workflows"
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+
+    for workflow in response.json():
+        print(f"Workflow: {workflow['name']}")
+        for state in workflow.get("states", []):
+            print(f"  - [{state['type']}] {state['name']} (id: {state['id']})")
