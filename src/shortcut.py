@@ -13,7 +13,7 @@ def get_blog_stories():
     Search Shortcut for all in-progress or unstarted stories
     that have a Google Doc link attached — our blog relevance filter.
     """
-    url = f"{BASE_URL}/search/stories"
+    url = f"{BASE_URL}/stories/search"
     payload = {
         "query": "is:story !is:done !is:archived",
         "page_size": 25
