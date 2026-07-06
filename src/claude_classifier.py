@@ -1,7 +1,13 @@
 import anthropic
 from config import ANTHROPIC_API_KEY
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+client = None
+
+def get_client():
+    global client
+    if client is None:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    return client
 
 CLASSIFICATION_PROMPT = """
 You are reviewing comments from a blog post Google Doc to determine if any are blocking publication.
@@ -40,7 +46,7 @@ def classify_comments(comments):
 
     comments_text = "\n".join([f"- {c}" for c in comments])
 
-    message = client.messages.create(
+    message = get_client().messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1000,
         messages=[
@@ -58,5 +64,4 @@ def classify_comments(comments):
         has_blocking = any(c["classification"] == "BLOCKING" for c in classified)
         return has_blocking, classified
     except (json.JSONDecodeError, IndexError, KeyError):
-        # If parsing fails, treat as blocking to be safe
         return True, []
