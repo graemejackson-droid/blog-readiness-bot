@@ -19,7 +19,9 @@ BLOG_PREFIXES = (
 def get_blog_stories():
     """
     Search Shortcut for all in-progress or unstarted stories
-    that match blog title prefixes and have a Google Doc link attached.
+    that match blog title prefixes. Returns two lists:
+    - stories with a Google Doc attached
+    - stories without a Google Doc yet
     """
     url = f"{BASE_URL}/search/stories"
     payload = {
@@ -32,11 +34,16 @@ def get_blog_stories():
     stories = response.json().get("data", [])
 
     blog_stories = []
+    no_doc_stories = []
+
     for story in stories:
         title_lower = story["name"].lower()
         is_blog = any(title_lower.startswith(prefix) for prefix in BLOG_PREFIXES)
+        if not is_blog:
+            continue
+
         google_doc_url = extract_google_doc_url(story)
-        if is_blog and google_doc_url:
+        if google_doc_url:
             blog_stories.append({
                 "id": story["id"],
                 "name": story["name"],
@@ -44,8 +51,15 @@ def get_blog_stories():
                 "google_doc_url": google_doc_url,
                 "thumbnail_status": None
             })
+        else:
+            no_doc_stories.append({
+                "id": story["id"],
+                "name": story["name"],
+                "story_url": story["app_url"],
+                "thumbnail_status": None
+            })
 
-    return blog_stories
+    return blog_stories, no_doc_stories
 
 
 def extract_google_doc_url(story):
