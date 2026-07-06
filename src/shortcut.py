@@ -8,10 +8,18 @@ HEADERS = {
     "Shortcut-Token": SHORTCUT_API_TOKEN
 }
 
+BLOG_PREFIXES = (
+    "[blog]",
+    "[blog post]",
+    "[content]",
+    "[design]"
+)
+
+
 def get_blog_stories():
     """
     Search Shortcut for all in-progress or unstarted stories
-    that have a Google Doc link attached — our blog relevance filter.
+    that match blog title prefixes and have a Google Doc link attached.
     """
     url = f"{BASE_URL}/search/stories"
     payload = {
@@ -25,8 +33,10 @@ def get_blog_stories():
 
     blog_stories = []
     for story in stories:
+        title_lower = story["name"].lower()
+        is_blog = any(title_lower.startswith(prefix) for prefix in BLOG_PREFIXES)
         google_doc_url = extract_google_doc_url(story)
-        if google_doc_url:
+        if is_blog and google_doc_url:
             blog_stories.append({
                 "id": story["id"],
                 "name": story["name"],
