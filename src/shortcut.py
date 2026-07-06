@@ -18,36 +18,44 @@ BLOG_PREFIXES = (
 
 def search_stories_by_prefix(prefix):
     """
-    Search Shortcut for non-archived stories whose title starts with a given prefix.
-    Paginates through all results.
+    Search Shortcut for stories in 'In Progress' or 'Needs Verification'
+    whose title starts with a given prefix. Paginates through all results.
     """
     url = f"{BASE_URL}/search/stories"
-    params = {
-        "query": f'title:{prefix} !is:archived',
-        "page_size": 25
-    }
-
     stories = []
+    next_cursor = None
 
     while True:
+        params = {
+            "query": f'title:{prefix} (state:"In Progress" OR state:"Needs Verification") !is:archived',
+            "page_size": 25
+        }
+        if next_cursor:
+            params["next"] = next_cursor
+
         response = requests.get(url, params=params, headers=HEADERS)
         response.raise_for_status()
         data = response.json()
         stories.extend(data.get("data", []))
 
-        next_page = data.get("next")
-        if not next_page:
+        next_url = data.get("next")
+        if not next_url:
             break
 
-        params["next"] = next_page.split("next=")[-1]
+        from urllib.parse import urlparse, parse_qs
+        parsed = urlparse(next_url)
+        qs = parse_qs(parsed.query)
+        next_cursor = qs.get("next", [None])[0]
+        if not next_cursor:
+            break
 
     return stories
 
 
 def get_blog_stories():
     """
-    Search Shortcut for all non-archived stories matching blog title prefixes.
-    Runs one search per prefix to avoid scanning the entire workspace.
+    Search Shortcut for all stories in 'In Progress' or 'Needs Verification'
+    matching blog title prefixes. Runs one search per prefix.
     Returns two lists:
     - stories with a Google Doc attached
     - stories without a Google Doc yet
@@ -61,7 +69,6 @@ def get_blog_stories():
         print(f"  '{prefix}' → {len(stories)} stories found")
 
         for story in stories:
-            # Deduplicate in case a story matches multiple prefixes
             if story["id"] in seen_ids:
                 continue
             seen_ids.add(story["id"])
