@@ -9,18 +9,17 @@ HEADERS = {
     "accept": "application/json"
 }
 
+
 def create_cms_draft(story_name, doc_fields):
     """
     Creates a draft CMS item in Webflow from extracted Google Doc fields.
     Does NOT publish — draft only, requires human review before going live.
-    
+
     doc_fields expected keys:
     - title
-    - author
-    - publish_date
-    - meta_description
     - slug
-    - tags
+    - meta_title
+    - meta_description
     - body
     """
     url = f"{BASE_URL}/collections/{WEBFLOW_COLLECTION_ID}/items"
@@ -31,11 +30,11 @@ def create_cms_draft(story_name, doc_fields):
         "fieldData": {
             "name": doc_fields.get("title", story_name),
             "slug": doc_fields.get("slug", ""),
-            "author": doc_fields.get("author", ""),
+            "meta-title": doc_fields.get("meta_title", doc_fields.get("title", story_name)),
+            "meta-description": doc_fields.get("meta_description", ""),
             "post-body": doc_fields.get("body", ""),
-            "post-summary": doc_fields.get("meta_description", ""),
-            "publish-date": doc_fields.get("publish_date", ""),
-            "tags": doc_fields.get("tags", "")
+            "featured": False,
+            "make-unlisted": True
         }
     }
 
@@ -55,7 +54,6 @@ def create_cms_draft(story_name, doc_fields):
 def get_collection_fields():
     """
     Utility function to inspect available fields in the Webflow CMS collection.
-    Useful during setup to confirm field names match what we're sending.
     """
     url = f"{BASE_URL}/collections/{WEBFLOW_COLLECTION_ID}"
     response = requests.get(url, headers=HEADERS)
