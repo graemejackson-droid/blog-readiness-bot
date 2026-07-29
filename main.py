@@ -1,8 +1,9 @@
 import sys
-from src.shortcut import get_blog_stories, get_thumbnail_status, get_workflow_state_name, debug_workflow_states
+from src.shortcut import get_blog_stories, get_thumbnail_status, get_workflow_state_name
 from src.claude_classifier import classify_comments
 from src.slack_reporter import send_readiness_report
-from src.webflow import get_collection_fields
+from src.webflow import create_cms_draft
+from src.google_docs import check_doc_readiness, get_doc_comments
 
 
 def assess_story(story):
@@ -12,19 +13,22 @@ def assess_story(story):
     """
     reasons = []
     ready = True
+    doc_fields = {}
 
-    # --- Google Doc checks (enabled once IT provides service account JSON) ---
-    # doc_url = story["google_doc_url"]
-    # doc_ready, doc_reasons = check_doc_readiness(doc_url)
-    # if not doc_ready:
-    #     ready = False
-    #     reasons.extend(doc_reasons)
-    #
-    # comments = get_doc_comments(doc_url)
-    # has_blocking, classified = classify_comments(comments)
-    # if has_blocking:
-    #     ready = False
-    #     reasons.append("Blocking comments detected")
+    # --- Google Doc checks ---
+    doc_url = story["google_doc_url"]
+    doc_ready, doc_reasons, doc_fields = check_doc_readiness(doc_url)
+    if not doc_ready:
+        ready = False
+        reasons.extend(doc_reasons)
+
+    if ready:
+        doc_id = doc_url.split("/d/")[1].split("/")[0]
+        comments = get_doc_comments(doc_id)
+        has_blocking, classified = classify_comments(comments)
+        if has_blocking:
+            ready = False
+            reasons.append("Blocking comments detected")
 
     # --- Thumbnail status ---
     workflow_state_id, thumbnail_name = get_thumbnail_status(story["id"])
@@ -37,17 +41,13 @@ def assess_story(story):
     story["thumbnail_status"] = thumbnail_status
     story["ready"] = ready
     story["reasons"] = reasons
+    story["doc_fields"] = doc_fields
 
     return story
 
 
 def main():
     print("🔍 Starting weekly blog readiness scan...")
-
-    # Temporary: inspect Webflow CMS fields
-    print("\n--- Webflow CMS Collection Fields ---")
-    get_collection_fields()
-    print("-------------------------------------\n")
 
     # Step 1 — Fetch all blog stories from Shortcut
     print("Fetching stories from Shortcut...")
@@ -76,7 +76,18 @@ def main():
     print(f"⚠️  Not ready: {len(not_ready_stories)}")
     print(f"📄 No doc yet: {len(no_doc_stories)}")
 
-    # Step 3 — Send Slack report
+    # Step 3 — Auto-draft ready stories in Webflow
+    for story in ready_stories:
+        if story.get("doc_fields"):
+            print(f"Creating Webflow draft for: {story['name']}")
+            draft_url = create_cms_draft(story["name"], story["doc_fields"])
+            if draft_url:
+                story["webflow_draft_url"] = draft_url
+                print(f"  ✅ Draft created: {draft_url}")
+            else:
+                print(f"  ❌ Draft creation failed for: {story['name']}")
+
+    # Step 4 — Send Slack report
     print("\nSending Slack report...")
     send_readiness_report(ready_stories, not_ready_stories, no_doc_stories)
 
