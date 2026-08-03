@@ -121,4 +121,4 @@ def has_body_content(doc):
                 text = pe.get("textRun", {}).get("content", "").strip()
                 text_length += len(text)
 
-    print(f"  📝 Body copy length after table: {text_length}
+    print(f"  Body copy length after table: {text_length} chars")
