@@ -10,12 +10,14 @@ SCOPES = [
 ]
 
 REQUIRED_TABLE_FIELDS = [
-    "title",
-    "author",
-    "publish date",
+    "page type",
+    "category",
+    "tags",
+    "url",
+    "page title",
+    "meta title",
     "meta description",
-    "slug",
-    "tags"
+    "target keywords"
 ]
 
 
@@ -129,6 +131,44 @@ def get_doc_comments(doc_id):
         return []
 
 
+def map_fields_for_webflow(table_fields):
+    """
+    Maps Google Doc table fields to Webflow CMS field names.
+    """
+    return {
+        "title": table_fields.get("page title", ""),
+        "slug": table_fields.get("url", "").lstrip("/"),
+        "meta_title": table_fields.get("meta title", ""),
+        "meta_description": table_fields.get("meta description", ""),
+        "tags": table_fields.get("tags", ""),
+        "body": ""  # Body copy populated separately from doc content
+    }
+
+
+def extract_body_content(doc):
+    """
+    Extracts all text content below the first table as the blog body.
+    """
+    body = doc.get("body", {})
+    content = body.get("content", [])
+    past_first_table = False
+    body_text = ""
+
+    for element in content:
+        if element.get("table"):
+            past_first_table = True
+            continue
+
+        if past_first_table:
+            paragraph = element.get("paragraph", {})
+            line = ""
+            for pe in paragraph.get("elements", []):
+                line += pe.get("textRun", {}).get("content", "")
+            body_text += line
+
+    return body_text.strip()
+
+
 def check_doc_readiness(google_doc_url):
     reasons = []
     doc_fields = {}
@@ -144,7 +184,6 @@ def check_doc_readiness(google_doc_url):
 
     # Check 1 — Table completeness
     table_fields = extract_table_fields(doc)
-    doc_fields = table_fields
     missing_fields = []
 
     for required in REQUIRED_TABLE_FIELDS:
@@ -164,6 +203,12 @@ def check_doc_readiness(google_doc_url):
         print(f"  ❌ No body copy")
     else:
         print(f"  ✅ Body copy present")
+
+    # Build mapped fields for Webflow if ready
+    if not reasons:
+        body_text = extract_body_content(doc)
+        doc_fields = map_fields_for_webflow(table_fields)
+        doc_fields["body"] = body_text
 
     is_ready = len(reasons) == 0
     return is_ready, reasons, doc_fields
