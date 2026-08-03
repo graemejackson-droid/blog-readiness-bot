@@ -47,7 +47,7 @@ def assess_story(story):
 
 
 def main():
-    print("🔍 Starting weekly blog readiness scan...")
+    print("Starting weekly blog readiness scan...")
 
     # Step 1 — Fetch all blog stories from Shortcut
     print("Fetching stories from Shortcut...")
@@ -56,9 +56,9 @@ def main():
     print(f"Found {len(no_doc_stories)} blog stories with no Google Doc yet")
 
     for s in all_blog_stories:
-        print(f"  ✅ Has doc: {s['name']}")
+        print(f"  Has doc: {s['name']}")
     for s in no_doc_stories:
-        print(f"  📄 No doc: {s['name']}")
+        print(f"  No doc: {s['name']}")
 
     # Step 2 — Assess each story that has a doc
     ready_stories = []
@@ -72,26 +72,27 @@ def main():
         else:
             not_ready_stories.append(assessed)
 
-    print(f"\n✅ Ready: {len(ready_stories)}")
-    print(f"⚠️  Not ready: {len(not_ready_stories)}")
-    print(f"📄 No doc yet: {len(no_doc_stories)}")
+    print(f"\nReady: {len(ready_stories)}")
+    print(f"Not ready: {len(not_ready_stories)}")
+    print(f"No doc yet: {len(no_doc_stories)}")
 
-    # Step 3 — Auto-draft ready stories in Webflow
-    for story in ready_stories:
-        if story.get("doc_fields"):
-            print(f"Creating Webflow draft for: {story['name']}")
-            draft_url = create_cms_draft(story["name"], story["doc_fields"])
-            if draft_url:
-                story["webflow_draft_url"] = draft_url
-                print(f"  ✅ Draft created: {draft_url}")
-            else:
-                print(f"  ❌ Draft creation failed for: {story['name']}")
+    # Step 3 — Auto-draft ready stories in Webflow (paused during QA period)
+    # Uncomment when Joe and Graeme have signed off after two weeks of monitoring
+    # for story in ready_stories:
+    #     if story.get("doc_fields"):
+    #         print(f"Creating Webflow draft for: {story['name']}")
+    #         draft_url = create_cms_draft(story["name"], story["doc_fields"])
+    #         if draft_url:
+    #             story["webflow_draft_url"] = draft_url
+    #             print(f"  Draft created: {draft_url}")
+    #         else:
+    #             print(f"  Draft creation failed for: {story['name']}")
 
     # Step 4 — Send Slack report
     print("\nSending Slack report...")
     send_readiness_report(ready_stories, not_ready_stories, no_doc_stories)
 
-    print("\n🎉 Scan complete.")
+    print("\nScan complete.")
 
 
 if __name__ == "__main__":
